@@ -75,6 +75,7 @@ private slots:
     void connectVPN(bool reconnect = false);
     void disconnectVPN();
     void getVPNStatus();
+    QString generateTOTP(const QString &secret);
 
     //  QMetaObject::connectSlotsByName
     void on_buttonConnect_clicked();

@@ -178,6 +178,20 @@
                <property name="frame">
                 <bool>true</bool>
                </property>
+              </widget>
+             </item>
+             <item row="2" column="0">
+              <widget class="QLabel" name="labelOTPSecret">
+               <property name="text">
+                <string>OTP Secret:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <widget class="QLineEdit" name="lineEditOTPSecret">
+               <property name="frame">
+                <bool>true</bool>
+               </property>
                <property name="echoMode">
                 <enum>QLineEdit::Password</enum>
                </property>
