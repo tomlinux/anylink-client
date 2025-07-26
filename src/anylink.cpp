@@ -381,7 +381,8 @@ QByteArray AnyLink::decode32(const QString &input)
     int buffer = 0, bitsLeft = 0;
 
     for (QChar ch : cleanInput) {
-        const char *p = strchr(base32Chars, ch);
+        char c = ch.toLatin1();
+        const char *p = strchr(base32Chars, c);
         if (!p)
             continue;  // 忽略非法字符（如空格或非 Base32）
 
