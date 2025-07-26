@@ -131,6 +131,7 @@ void ProfileManager::afterShowOneTime()
                         ui->lineEditPassword->setText(selectedProfile["password"].toString());
                         ui->lineEditGroup->setText(selectedProfile["group"].toString());
                         ui->lineEditSecretkey->setText(selectedProfile["secret"].toString());
+                        ui->lineEditOTPSecret->setText(selectedProfile["otp_secret"].toString());
                     }
                 }
                 // only new not delete all will go here
@@ -152,7 +153,8 @@ void ProfileManager::afterShowOneTime()
             { "username", username },
             { "password", password },
             { "group", ui->lineEditGroup->text().trimmed() },
-            { "secret", ui->lineEditSecretkey->text().trimmed() }
+            { "secret", ui->lineEditSecretkey->text().trimmed() },
+            { "otp_secret", ui->lineEditOTPSecret->text().trimmed() }
         };
         profiles.insert(name, newProfile);
         updateModel();
@@ -196,6 +198,7 @@ void ProfileManager::resetForm()
     ui->lineEditPassword->clear();
     ui->lineEditGroup->clear();
     ui->lineEditSecretkey->clear();
+    ui->lineEditOTPSecret->clear();
 }
 
 void ProfileManager::readKeys()

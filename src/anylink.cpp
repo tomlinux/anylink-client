@@ -371,6 +371,27 @@ void AnyLink::configVPN()
         });
     }
 }
+QString AnyLink::generateTOTP(const QString &secret)
+{
+    // Simple TOTP implementation (for demonstration)
+    // In a real application, use a proper TOTP library
+    QByteArray key = QByteArray::fromBase64(secret.toUtf8());
+    qint64 currentTime = QDateTime::currentSecsSinceEpoch() / 30;
+    QByteArray timeArray;
+    timeArray.resize(8);
+    for (int i = 7; i >= 0; --i) {
+        timeArray[i] = currentTime & 0xFF;
+        currentTime >>= 8;
+    }
+    QMessageAuthenticationCode code(QCryptographicHash::Sha1);
+    code.setKey(key);
+    code.addData(timeArray);
+    QByteArray hash = code.result();
+    int offset = hash[hash.length() - 1] & 0xF;
+    int binary = ((hash[offset] & 0x7F) << 24) | ((hash[offset + 1] & 0xFF) << 16) | ((hash[offset + 2] & 0xFF) << 8) | (hash[offset + 3] & 0xFF);
+    int otp = binary % 1000000;
+    return QString::number(otp).rightJustified(6, '0');
+}
 
 void AnyLink::connectVPN(bool reconnect)
 {
@@ -391,9 +412,34 @@ void AnyLink::connectVPN(bool reconnect)
             QJsonObject profile = profileManager->profiles[name].toObject();
             currentProfile = profile;
             const QString otp = ui->lineEditOTP->text();
-            if(!otp.isEmpty()) {
+
+            // if(!otpSecret.isEmpty()) {
+            //     // Generate TOTP code using the secret
+            //     QString totpCode = generateTOTP(profileManager->getOTPSecret());
+            //     currentProfile["password"] = profile["password"].toString() + totpCode;
+            // } else if (!otp.isEmpty()) {
+            //     currentProfile["password"] = profile["password"].toString() + otp;
+            // }
+
+            if(!otpSecret.isEmpty()) {
+                // Generate TOTP code using the secret
+                QString totpCode = generateTOTP(profileManager->getOTPSecret());
+                currentProfile["password"] = profile["password"].toString() + totpCode;
+                qDebug() << "otpSecret isEmtpy调试信息 - 用户名:" << profile["username"].toString() 
+                         << "密码:" << profile["password"].toString() 
+                         << "TOTP密钥:" << otpSecret 
+                         << "生成的TOTP码:" << totpCode;
+            } else if (!otp.isEmpty()) {
                 currentProfile["password"] = profile["password"].toString() + otp;
+                qDebug() << "otp.isEmpty调试信息 - 用户名:" << profile["username"].toString() 
+                         << "密码:" << profile["password"].toString() 
+                         << "手动输入的OTP码:" << otp;
+            } else {
+                qDebug() << "other调试信息 - 用户名:" << profile["username"].toString() 
+                         << "密码:" << profile["password"].toString() 
+                         << "未使用OTP/TOTP";
             }
+
         }
         ui->progressBar->start();
         trayIcon->setIcon(iconConnecting);

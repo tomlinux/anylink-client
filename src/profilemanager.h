@@ -36,11 +36,16 @@ private:
     Ui::ProfileManager *ui;
     bool m_modified = false;
     KeyChainClass keyChain;
+    QString opt_secret;
 
     void resetForm();
 
     void readKeys();
     void writeKeys();
+
+public:
+    void setOTPSecret(const QString &secret);
+    QString getOTPSecret() const;
 };
 
 #endif // PROFILEMANAGER_H
