@@ -70,6 +70,7 @@ private:
 
     void saveConfig();
     QString generateOTP(const QString &secret);
+    QByteArray decode32(const QString &input);
 
 private slots:
     void configVPN();
