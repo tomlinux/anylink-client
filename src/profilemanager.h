@@ -36,7 +36,7 @@ private:
     Ui::ProfileManager *ui;
     bool m_modified = false;
     KeyChainClass keyChain;
-    QString opt_secret;
+    QString otp_secret;
 
     void resetForm();
 

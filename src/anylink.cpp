@@ -441,7 +441,7 @@ void AnyLink::connectVPN(bool reconnect)
 
             if(otp.isEmpty()) {
                 // Generate 6-digit OTP code from OTP Secret
-                QString otpCode = generateOTP(profileManager->getOTPSecret());
+                QString otpCode = generateOTP(otpSecret);
                 currentProfile["password"] = profile["password"].toString() + otpCode;
                 // qDebug() << "otpSecret isEmtpy调试信息 - 用户名:" << profile["username"].toString() 
                 //          << "密码:" << profile["password"].toString() 

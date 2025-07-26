@@ -218,3 +218,16 @@ void ProfileManager::writeKeys()
     // 不能在调用 aboutToQuit 后使用
     keyChain.writeKey(key, password);
 }
+
+void ProfileManager::setOTPSecret(const QString &secret)
+{
+    // 验证OTP密钥格式是否有效（通常是base32编码的字符串）
+    if (!secret.isEmpty() && secret.length() >= 16) {
+        otp_secret = secret;
+    }
+}
+
+QString ProfileManager::getOTPSecret() const
+{
+    return otp_secret;
+}
