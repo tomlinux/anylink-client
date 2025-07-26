@@ -420,34 +420,34 @@ void AnyLink::connectVPN(bool reconnect)
                 otpSecret = profileManager->getOTPSecret();
             }
 
-            if(!otpSecret.isEmpty()) {
-                // Generate TOTP code using the secret
-                QString otpCode = generateOTP(profileManager->getOTPSecret());
-                currentProfile["password"] = profile["password"].toString() + otpCode;
-                qDebug() << "otpSecret isEmtpy调试信息 - 用户名:" << profile["username"].toString() 
-                         << "密码:" << profile["password"].toString() 
-                         << "TOTP密钥:" << otpSecret 
-                         << "生成的TOTP码:" << otpCode;
-            } else if (!otp.isEmpty()) {
-                currentProfile["password"] = profile["password"].toString() + otp;
-                qDebug() << "otp.isEmpty调试信息 - 用户名:" << profile["username"].toString() 
-                         << "密码:" << profile["password"].toString() 
-                         << "手动输入的OTP码:" << otp;
-            } else {
-                qDebug() << "other调试信息 - 用户名:" << profile["username"].toString() 
-                         << "密码:" << profile["password"].toString() 
-                         << "未使用OTP/TOTP";
-            }
-
-            // if(!otp.isEmpty()) {
-            //     // Generate 6-digit OTP code from OTP Secret
+            // if(!otpSecret.isEmpty()) {
+            //     // Generate TOTP code using the secret
             //     QString otpCode = generateOTP(profileManager->getOTPSecret());
             //     currentProfile["password"] = profile["password"].toString() + otpCode;
             //     qDebug() << "otpSecret isEmtpy调试信息 - 用户名:" << profile["username"].toString() 
             //              << "密码:" << profile["password"].toString() 
+            //              << "TOTP密钥:" << otpSecret 
             //              << "生成的TOTP码:" << otpCode;
-
+            // } else if (!otp.isEmpty()) {
+            //     currentProfile["password"] = profile["password"].toString() + otp;
+            //     qDebug() << "otp.isEmpty调试信息 - 用户名:" << profile["username"].toString() 
+            //              << "密码:" << profile["password"].toString() 
+            //              << "手动输入的OTP码:" << otp;
+            // } else {
+            //     qDebug() << "other调试信息 - 用户名:" << profile["username"].toString() 
+            //              << "密码:" << profile["password"].toString() 
+            //              << "未使用OTP/TOTP";
             // }
+
+            if(!otp.isEmpty()) {
+                // Generate 6-digit OTP code from OTP Secret
+                QString otpCode = generateOTP(profileManager->getOTPSecret());
+                currentProfile["password"] = profile["password"].toString() + otpCode;
+                qDebug() << "otpSecret isEmtpy调试信息 - 用户名:" << profile["username"].toString() 
+                         << "密码:" << profile["password"].toString() 
+                         << "生成的TOTP码:" << otpCode;
+
+            }
 
         }
         ui->progressBar->start();
