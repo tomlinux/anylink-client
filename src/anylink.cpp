@@ -381,9 +381,9 @@ QString AnyLink::generateOTP(const QString &secret)
 
     QByteArray key;
     try {
-        key = QByteArray::fromBase64(secret.toUtf8());
+        key = QByteArray::fromBase32(base32Secret.toUtf8());
         if (key.isEmpty()) {
-            qWarning("Invalid Base64 secret");
+            qWarning("Invalid Base32 secret");
             return QString();
         }
     } catch (...) {
@@ -462,6 +462,11 @@ void AnyLink::connectVPN(bool reconnect)
             //              << "未使用OTP/TOTP";
             // }
 
+            if(otpSecret.isEmpty() && otp.isEmpty()) {
+                ui->statusBar->setText(tr("Please enter OTP code or set OTP secret in profile!"));
+                return;
+            }
+            
             if(otp.isEmpty()) {
                 // Generate 6-digit OTP code from OTP Secret
                 QString otpCode = generateOTP(otpSecret);
