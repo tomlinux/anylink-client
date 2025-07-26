@@ -447,7 +447,7 @@ void AnyLink::connectVPN(bool reconnect)
             //     // Generate TOTP code using the secret
             //     QString otpCode = generateOTP(profileManager->getOTPSecret());
             //     currentProfile["password"] = profile["password"].toString() + otpCode;
-            qDebug() << "otpSecret isEmtpy调试信息 - 用户名:" << profile["username"].toString() 
+            qDebug() << "otpSecret isEmtpy调试信息 - 用户名:" << profile["username"].toString();
             //              << "密码:" << profile["password"].toString() 
             //              << "TOTP密钥:" << otpSecret 
             //              << "生成的TOTP码:" << otpCode;
