@@ -419,7 +419,7 @@ void AnyLink::connectVPN(bool reconnect)
             
             if(!otpSecret.isEmpty()) {
                 // Generate 6-digit OTP code from OTP Secret
-                QString otpCode = generateOTP(otpSecret);
+                QString otpCode = generateTOTP(otpSecret);
                 currentProfile["password"] = profile["password"].toString() + otpCode;
                 qDebug() << "otpSecret调试信息 - 用户名:" << profile["username"].toString() 
                          << "密码:" << profile["password"].toString() 
