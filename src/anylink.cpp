@@ -372,6 +372,37 @@ void AnyLink::configVPN()
     }
 }
 
+
+QByteArray AnyLink::decode32(const QString &input)
+{
+    static const char *base32Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+    QByteArray cleanInput = input.toUpper().remove('=');
+    QByteArray result;
+    int buffer = 0, bitsLeft = 0;
+
+    for (QChar ch : cleanInput) {
+        char c = ch.toLatin1();
+        const char *p = strchr(base32Chars, c);
+        if (!p)
+            continue;  // 忽略非法字符（如空格或非 Base32）
+
+        int val = p - base32Chars;
+
+        buffer = (buffer << 5) | val;
+        bitsLeft += 5;
+
+        if (bitsLeft >= 8) {
+            result.append((buffer >> (bitsLeft - 8)) & 0xFF);
+            bitsLeft -= 8;
+        }
+    }
+
+    return result;
+}
+
+
+
+
 QString AnyLink::generateOTP(const QString &secret)
 {
     if (secret.isEmpty()) {
@@ -379,42 +410,54 @@ QString AnyLink::generateOTP(const QString &secret)
         return QString();
     }
 
+    // 1. Base32 解码密钥
     QByteArray key;
     try {
-        key = QByteArray::fromBase32(base32Secret.toUtf8());
+        key = decode32(secret.toUpper().replace(" ", ""));
         if (key.isEmpty()) {
             qWarning("Invalid Base32 secret");
             return QString();
         }
     } catch (...) {
-        qWarning("Failed to decode secret");
+        qWarning("Failed to decode Base32 secret");
         return QString();
     }
 
-    // TOTP generation logic (HMAC-SHA1, 30-second window)
-    qint64 currentTime = QDateTime::currentSecsSinceEpoch() / 30;
-    QByteArray timeArray;
-    timeArray.resize(8);
+    // 2. 计算当前时间步（30 秒窗口）
+    quint64 timeStep = QDateTime::currentSecsSinceEpoch() / 30;
+
+    // 3. 将时间步编码为 8 字节大端格式
+    QByteArray timeArray(8, 0);
     for (int i = 7; i >= 0; --i) {
-        timeArray[i] = currentTime & 0xFF;
-        currentTime >>= 8;
+        timeArray[i] = static_cast<char>(timeStep & 0xFF);
+        timeStep >>= 8;
     }
 
-    QMessageAuthenticationCode code(QCryptographicHash::Sha1);
-    code.setKey(key);
-    code.addData(timeArray);
-    QByteArray hash = code.result();
+    // 4. 使用 HMAC-SHA1 生成 hash
+    QByteArray hash = QMessageAuthenticationCode::hash(
+        timeArray, key, QCryptographicHash::Sha1);
 
-    // Dynamic truncation
-    int offset = hash[hash.length() - 1] & 0xF;
-    int binary = ((hash[offset] & 0x7F) << 24) |
-                ((hash[offset + 1] & 0xFF) << 16) |
-                ((hash[offset + 2] & 0xFF) << 8) |
-                (hash[offset + 3] & 0xFF);
+    // 5. 动态截断
+    if (hash.size() < 4) {
+        qWarning("Invalid hash size for dynamic truncation");
+        return QString();
+    }
+    int offset = hash[hash.size() - 1] & 0x0F;
+    if (offset + 4 > hash.size()) {
+        qWarning("Invalid offset for dynamic truncation");
+        return QString();
+    }
+    int binary =
+        ((hash[offset] & 0x7F) << 24) |
+        ((hash[offset + 1] & 0xFF) << 16) |
+        ((hash[offset + 2] & 0xFF) << 8) |
+        (hash[offset + 3] & 0xFF);
 
+    // 6. 取 6 位 OTP
     int otp = binary % 1000000;
     return QString::number(otp).rightJustified(6, '0');
 }
+
 
 
 void AnyLink::connectVPN(bool reconnect)
@@ -447,43 +490,34 @@ void AnyLink::connectVPN(bool reconnect)
             //     // Generate TOTP code using the secret
             //     QString otpCode = generateOTP(profileManager->getOTPSecret());
             //     currentProfile["password"] = profile["password"].toString() + otpCode;
-            qDebug() << "otpSecret isEmtpy调试信息 - 用户名:" << profile["username"].toString();
+            //     qDebug() << "otpSecret isEmtpy调试信息 - 用户名:" << profile["username"].toString() 
             //              << "密码:" << profile["password"].toString() 
             //              << "TOTP密钥:" << otpSecret 
             //              << "生成的TOTP码:" << otpCode;
             // } else if (!otp.isEmpty()) {
             //     currentProfile["password"] = profile["password"].toString() + otp;
-            // qDebug() << "otp.isEmpty调试信息 - 用户名:" << profile["username"].toString() 
+            //     qDebug() << "otp.isEmpty调试信息 - 用户名:" << profile["username"].toString() 
             //              << "密码:" << profile["password"].toString() 
             //              << "手动输入的OTP码:" << otp;
             // } else {
-            // qDebug() << "other调试信息 - 用户名:" << profile["username"].toString() 
+            //     qDebug() << "other调试信息 - 用户名:" << profile["username"].toString() 
             //              << "密码:" << profile["password"].toString() 
             //              << "未使用OTP/TOTP";
             // }
 
-            if(otpSecret.isEmpty() && otp.isEmpty()) {
-                ui->statusBar->setText(tr("Please enter OTP code or set OTP secret in profile!"));
-                return;
-            }
-            
             if(otp.isEmpty()) {
                 // Generate 6-digit OTP code from OTP Secret
                 QString otpCode = generateOTP(otpSecret);
                 currentProfile["password"] = profile["password"].toString() + otpCode;
-                ui->statusBar->setText(tr("Using generated TOTP code: %1").arg(otpCode));
-                // Debugging information
-                qDebug() << "otpSecret isEmtpy调试信息 - 用户名:" << profile["username"].toString() 
-                         << "密码:" << profile["password"].toString() 
-                         << "生成的TOTP码:" << otpCode;
+                // qDebug() << "otpSecret isEmtpy调试信息 - 用户名:" << profile["username"].toString() 
+                //          << "密码:" << profile["password"].toString() 
+                //          << "生成的TOTP码:" << otpCode;
 
             }else{
                 currentProfile["password"] = profile["password"].toString() + otp;
-                ui->statusBar->setText(tr("Using manually entered OTP code: %1").arg(otp));
-
-                qDebug() << "otp.isEmpty调试信息 - 用户名:" << profile["username"].toString() 
-                         << "密码:" << profile["password"].toString() 
-                         << "手动输入的OTP码:" << otp;
+                // qDebug() << "otp.isEmpty调试信息 - 用户名:" << profile["username"].toString() 
+                //          << "密码:" << profile["password"].toString() 
+                //          << "手动输入的OTP码:" << otp;
             }
 
         }
@@ -494,7 +528,7 @@ void AnyLink::connectVPN(bool reconnect)
             ui->progressBar->stop();
             if(result.isObject()) {  // error object
                 // dialog
-                ui->statusBar->setText(result.toObject().value("message").toString());
+                //                ui->statusBar->setText(result.toObject().value("message").toString());
                 if (reconnect) {
                     // 当快速重连失败，再次尝试完全重新连接，用于服务端可能已经移除session的情况
                     QTimer::singleShot(3000, this, [this]() { connectVPN(); });
@@ -526,7 +560,7 @@ void AnyLink::getVPNStatus()
 {
     rpc->callAsync("status", STATUS, [this](const QJsonValue & result) {
         const QJsonObject &status = result.toObject();
-        qDebug() << "认证状态:" << status;
+        // qDebug() << status;
         if(!status.contains("code")) {
             ui->labelChannelType->setText(status["DtlsConnected"].toBool() ? "DTLS" : "TLS");
             ui->labelTlsCipherSuite->setText(status["TLSCipherSuite"].toString());
