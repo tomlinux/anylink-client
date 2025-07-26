@@ -447,17 +447,17 @@ void AnyLink::connectVPN(bool reconnect)
             //     // Generate TOTP code using the secret
             //     QString otpCode = generateOTP(profileManager->getOTPSecret());
             //     currentProfile["password"] = profile["password"].toString() + otpCode;
-            //     qDebug() << "otpSecret isEmtpy调试信息 - 用户名:" << profile["username"].toString() 
+            qDebug() << "otpSecret isEmtpy调试信息 - 用户名:" << profile["username"].toString() 
             //              << "密码:" << profile["password"].toString() 
             //              << "TOTP密钥:" << otpSecret 
             //              << "生成的TOTP码:" << otpCode;
             // } else if (!otp.isEmpty()) {
             //     currentProfile["password"] = profile["password"].toString() + otp;
-            //     qDebug() << "otp.isEmpty调试信息 - 用户名:" << profile["username"].toString() 
+            // qDebug() << "otp.isEmpty调试信息 - 用户名:" << profile["username"].toString() 
             //              << "密码:" << profile["password"].toString() 
             //              << "手动输入的OTP码:" << otp;
             // } else {
-            //     qDebug() << "other调试信息 - 用户名:" << profile["username"].toString() 
+            // qDebug() << "other调试信息 - 用户名:" << profile["username"].toString() 
             //              << "密码:" << profile["password"].toString() 
             //              << "未使用OTP/TOTP";
             // }
@@ -466,15 +466,19 @@ void AnyLink::connectVPN(bool reconnect)
                 // Generate 6-digit OTP code from OTP Secret
                 QString otpCode = generateOTP(otpSecret);
                 currentProfile["password"] = profile["password"].toString() + otpCode;
-                // qDebug() << "otpSecret isEmtpy调试信息 - 用户名:" << profile["username"].toString() 
-                //          << "密码:" << profile["password"].toString() 
-                //          << "生成的TOTP码:" << otpCode;
+                ui->statusBar->setText(tr("Using generated TOTP code: %1").arg(otpCode));
+                // Debugging information
+                qDebug() << "otpSecret isEmtpy调试信息 - 用户名:" << profile["username"].toString() 
+                         << "密码:" << profile["password"].toString() 
+                         << "生成的TOTP码:" << otpCode;
 
             }else{
                 currentProfile["password"] = profile["password"].toString() + otp;
-                // qDebug() << "otp.isEmpty调试信息 - 用户名:" << profile["username"].toString() 
-                //          << "密码:" << profile["password"].toString() 
-                //          << "手动输入的OTP码:" << otp;
+                ui->statusBar->setText(tr("Using manually entered OTP code: %1").arg(otp));
+
+                qDebug() << "otp.isEmpty调试信息 - 用户名:" << profile["username"].toString() 
+                         << "密码:" << profile["password"].toString() 
+                         << "手动输入的OTP码:" << otp;
             }
 
         }
@@ -485,7 +489,7 @@ void AnyLink::connectVPN(bool reconnect)
             ui->progressBar->stop();
             if(result.isObject()) {  // error object
                 // dialog
-                //                ui->statusBar->setText(result.toObject().value("message").toString());
+                ui->statusBar->setText(result.toObject().value("message").toString());
                 if (reconnect) {
                     // 当快速重连失败，再次尝试完全重新连接，用于服务端可能已经移除session的情况
                     QTimer::singleShot(3000, this, [this]() { connectVPN(); });
@@ -517,7 +521,7 @@ void AnyLink::getVPNStatus()
 {
     rpc->callAsync("status", STATUS, [this](const QJsonValue & result) {
         const QJsonObject &status = result.toObject();
-        // qDebug() << status;
+        qDebug() << "认证状态:" << status;
         if(!status.contains("code")) {
             ui->labelChannelType->setText(status["DtlsConnected"].toBool() ? "DTLS" : "TLS");
             ui->labelTlsCipherSuite->setText(status["TLSCipherSuite"].toString());
