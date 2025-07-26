@@ -69,7 +69,8 @@ private:
     void resetVPNStatus();
 
     void saveConfig();
-
+    QString generateOTP(const QString &secret);
+    
 private slots:
     void configVPN();
     void connectVPN(bool reconnect = false);
