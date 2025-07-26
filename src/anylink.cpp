@@ -376,13 +376,12 @@ void AnyLink::configVPN()
 QByteArray AnyLink::decode32(const QString &input)
 {
     static const char *base32Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-    QByteArray cleanInput = input.toUpper().remove('=');
+    QByteArray cleanInput = input.toUpper().remove('=').toUtf8();
     QByteArray result;
     int buffer = 0, bitsLeft = 0;
 
     for (QChar ch : cleanInput) {
-        char c = ch.toLatin1();
-        const char *p = strchr(base32Chars, c);
+        const char *p = strchr(base32Chars, ch);
         if (!p)
             continue;  // 忽略非法字符（如空格或非 Base32）
 
