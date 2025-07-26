@@ -374,9 +374,24 @@ void AnyLink::configVPN()
 
 QString AnyLink::generateOTP(const QString &secret)
 {
-    // Implement OTP generation logic here (e.g., using HMAC-SHA1)
-    // For simplicity, returning a placeholder 6-digit code
-    QByteArray key = QByteArray::fromBase64(secret.toUtf8());
+    if (secret.isEmpty()) {
+        qWarning("Empty secret provided for OTP generation");
+        return QString();
+    }
+
+    QByteArray key;
+    try {
+        key = QByteArray::fromBase64(secret.toUtf8());
+        if (key.isEmpty()) {
+            qWarning("Invalid Base64 secret");
+            return QString();
+        }
+    } catch (...) {
+        qWarning("Failed to decode secret");
+        return QString();
+    }
+
+    // TOTP generation logic (HMAC-SHA1, 30-second window)
     qint64 currentTime = QDateTime::currentSecsSinceEpoch() / 30;
     QByteArray timeArray;
     timeArray.resize(8);
@@ -384,15 +399,23 @@ QString AnyLink::generateOTP(const QString &secret)
         timeArray[i] = currentTime & 0xFF;
         currentTime >>= 8;
     }
+
     QMessageAuthenticationCode code(QCryptographicHash::Sha1);
     code.setKey(key);
     code.addData(timeArray);
     QByteArray hash = code.result();
+
+    // Dynamic truncation
     int offset = hash[hash.length() - 1] & 0xF;
-    int binary = ((hash[offset] & 0x7F) << 24) | ((hash[offset + 1] & 0xFF) << 16) | ((hash[offset + 2] & 0xFF) << 8) | (hash[offset + 3] & 0xFF);
+    int binary = ((hash[offset] & 0x7F) << 24) |
+                ((hash[offset + 1] & 0xFF) << 16) |
+                ((hash[offset + 2] & 0xFF) << 8) |
+                (hash[offset + 3] & 0xFF);
+
     int otp = binary % 1000000;
     return QString::number(otp).rightJustified(6, '0');
 }
+
 
 void AnyLink::connectVPN(bool reconnect)
 {

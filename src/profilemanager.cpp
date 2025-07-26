@@ -221,10 +221,7 @@ void ProfileManager::writeKeys()
 
 void ProfileManager::setOTPSecret(const QString &secret)
 {
-    // 验证OTP密钥格式是否有效（通常是base32编码的字符串）
-    if (!secret.isEmpty() && secret.length() >= 16) {
-        otp_secret = secret;
-    }
+    otp_secret = secret;
 }
 
 QString ProfileManager::getOTPSecret() const
