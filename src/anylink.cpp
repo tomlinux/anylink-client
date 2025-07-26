@@ -376,7 +376,22 @@ QString AnyLink::generateOTP(const QString &secret)
 {
     // Implement OTP generation logic here (e.g., using HMAC-SHA1)
     // For simplicity, returning a placeholder 6-digit code
-    return "123456";
+    QByteArray key = QByteArray::fromBase64(secret.toUtf8());
+    qint64 currentTime = QDateTime::currentSecsSinceEpoch() / 30;
+    QByteArray timeArray;
+    timeArray.resize(8);
+    for (int i = 7; i >= 0; --i) {
+        timeArray[i] = currentTime & 0xFF;
+        currentTime >>= 8;
+    }
+    QMessageAuthenticationCode code(QCryptographicHash::Sha1);
+    code.setKey(key);
+    code.addData(timeArray);
+    QByteArray hash = code.result();
+    int offset = hash[hash.length() - 1] & 0xF;
+    int binary = ((hash[offset] & 0x7F) << 24) | ((hash[offset + 1] & 0xFF) << 16) | ((hash[offset + 2] & 0xFF) << 8) | (hash[offset + 3] & 0xFF);
+    int otp = binary % 1000000;
+    return QString::number(otp).rightJustified(6, '0');
 }
 
 void AnyLink::connectVPN(bool reconnect)
