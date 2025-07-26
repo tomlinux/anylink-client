@@ -52,12 +52,6 @@ AnyLink::AnyLink(QWidget *parent)
         }
     });
 
-    // Add OTP secret input field
-    ui->lineEditOTPSecret = new QLineEdit(this);
-    ui->lineEditOTPSecret->setPlaceholderText(tr("Enter OTP Secret"));
-    ui->lineEditOTPSecret->setEchoMode(QLineEdit::Password);
-    ui->verticalLayout->addWidget(ui->lineEditOTPSecret);
-
     profileManager = new ProfileManager(this);
 
     if(profileManager->loadProfile(Json)) {
@@ -359,28 +353,6 @@ void AnyLink::saveConfig()
     configManager->saveConfig();
 }
 
-QString AnyLink::generateTOTP(const QString &secret)
-{
-    // Simple TOTP implementation (for demonstration)
-    // In a real application, use a proper TOTP library
-    QByteArray key = QByteArray::fromBase64(secret.toUtf8());
-    qint64 currentTime = QDateTime::currentSecsSinceEpoch() / 30;
-    QByteArray timeArray;
-    timeArray.resize(8);
-    for (int i = 7; i >= 0; --i) {
-        timeArray[i] = currentTime & 0xFF;
-        currentTime >>= 8;
-    }
-    QMessageAuthenticationCode code(QCryptographicHash::Sha1);
-    code.setKey(key);
-    code.addData(timeArray);
-    QByteArray hash = code.result();
-    int offset = hash[hash.length() - 1] & 0xF;
-    int binary = ((hash[offset] & 0x7F) << 24) | ((hash[offset + 1] & 0xFF) << 16) | ((hash[offset + 2] & 0xFF) << 8) | (hash[offset + 3] & 0xFF);
-    int otp = binary % 1000000;
-    return QString::number(otp).rightJustified(6, '0');
-}
-
 /**
  * called by JsonRpcWebSocketClient::connected and every time setting changed
  */
@@ -419,12 +391,7 @@ void AnyLink::connectVPN(bool reconnect)
             QJsonObject profile = profileManager->profiles[name].toObject();
             currentProfile = profile;
             const QString otp = ui->lineEditOTP->text();
-            const QString otpSecret = ui->lineEditOTPSecret->text();
-            if(!otp.isEmpty() && !otpSecret.isEmpty()) {
-                // Generate TOTP code using the secret
-                QString totpCode = generateTOTP(otpSecret);
-                currentProfile["password"] = profile["password"].toString() + totpCode;
-            } else if (!otp.isEmpty()) {
+            if(!otp.isEmpty()) {
                 currentProfile["password"] = profile["password"].toString() + otp;
             }
         }
