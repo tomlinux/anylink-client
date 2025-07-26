@@ -264,7 +264,7 @@ void AnyLink::afterShowOneTime()
             close();
             trayIcon->setToolTip(tr("Connected to: ") + currentProfile.value("host").toString());
         }
-        if (configManager->config["lastProfile"].toString() != ui->comboBoxHost->currentText()) {
+        if (configManager->config["lastProfile"] != ui->comboBoxHost->currentText()) {
             configManager->config["lastProfile"] = ui->comboBoxHost->currentText();
             saveConfig();
         }
@@ -371,7 +371,7 @@ void AnyLink::configVPN()
         });
     }
 }
-QString AnyLink::generateTOTP(const QString &secret)
+QString AnyLink::generateOTP(const QString &secret)
 {
     // Simple TOTP implementation (for demonstration)
     // In a real application, use a proper TOTP library
@@ -398,166 +398,3 @@ void AnyLink::connectVPN(bool reconnect)
     if(rpc->isConnected()) {
         // profile may be modified, and may not emit currentTextChanged signal
         // must not affected by QComboBox::currentTextChanged
-
-        QString method = "connect";
-        int id = CONNECT;
-        if(reconnect) {
-            method = "reconnect";
-            id = RECONNECT;
-        } else {
-            const QString name = ui->comboBoxHost->currentText();
-            if (name.isEmpty()) {
-                return;
-            }
-            QJsonObject profile = profileManager->profiles[name].toObject();
-            currentProfile = profile;
-            const QString otp = ui->lineEditOTP->text();
-            
-            // 获取OTP密钥
-            const QString otpSecret = profile["otp_secret"].toString();
-            profileManager->setOTPSecret(otpSecret);
-            
-            if(!otpSecret.isEmpty()) {
-                // Generate 6-digit OTP code from OTP Secret
-                QString otpCode = generateTOTP(otpSecret);
-                currentProfile["password"] = profile["password"].toString() + otpCode;
-                qDebug() << "otpSecret调试信息 - 用户名:" << profile["username"].toString() 
-                         << "密码:" << profile["password"].toString() 
-                         << "TOTP密钥:" << otpSecret 
-                         << "生成的OTP码:" << otpCode;
-            } else if(!otp.isEmpty()) {
-                currentProfile["password"] = profile["password"].toString() + otp;
-                qDebug() << "otp调试信息 - 用户名:" << profile["username"].toString() 
-                         << "密码:" << profile["password"].toString() 
-                         << "手动输入的OTP码:" << otp;
-            }
-        }
-        ui->progressBar->start();
-        trayIcon->setIcon(iconConnecting);
-
-        rpc->callAsync(method, id, currentProfile, [this, reconnect](const QJsonValue &result) {
-            ui->progressBar->stop();
-            if(result.isObject()) {  // error object
-                // dialog
-                //                ui->statusBar->setText(result.toObject().value("message").toString());
-                if (reconnect) {
-                    // 当快速重连失败，再次尝试完全重新连接，用于服务端可能已经移除session的情况
-                    QTimer::singleShot(3000, this, [this]() { connectVPN(); });
-                } else {
-                    if (isHidden()) {
-                        show();
-                    }
-                    error(result.toObject().value("message").toString(), this);
-                }
-            } else {
-                ui->statusBar->setText(result.toString());
-                emit vpnConnected();
-            }
-        });
-    }
-}
-
-void AnyLink::disconnectVPN()
-{
-    if(rpc->isConnected()) {
-        ui->progressBar->start();
-        // because on_buttonConnect_clicked, must check m_vpnConnected outside
-        rpc->callAsync("disconnect", DISCONNECT);
-        activeDisconnect = true;
-    }
-}
-
-void AnyLink::getVPNStatus()
-{
-    rpc->callAsync("status", STATUS, [this](const QJsonValue & result) {
-        const QJsonObject &status = result.toObject();
-        // qDebug() << status;
-        if(!status.contains("code")) {
-            ui->labelChannelType->setText(status["DtlsConnected"].toBool() ? "DTLS" : "TLS");
-            ui->labelTlsCipherSuite->setText(status["TLSCipherSuite"].toString());
-            ui->labelDtlsCipherSuite->setText(status["DTLSCipherSuite"].toString());
-            ui->labelDTLSPort->setText(status["DTLSPort"].toString());
-            ui->labelServerAddress->setText(status["ServerAddress"].toString());
-            ui->labelLocalAddress->setText(status["LocalAddress"].toString());
-            ui->labelVPNAddress->setText(status["VPNAddress"].toString());
-            ui->labelMTU->setText(QString::number(status["MTU"].toInt()));
-            ui->labelDNS->setText(status["DNS"].toVariant().toStringList().join(","));
-
-            if (!ui->buttonDetails->isEnabled()) {
-                ui->buttonDetails->setEnabled(true);
-                detailDialog->setRoutes(status["SplitExclude"].toArray(), status["SplitInclude"].toArray());
-            }
-        }
-    });
-}
-
-void AnyLink::on_buttonConnect_clicked()
-{
-    if(rpc->isConnected()) {
-        if(m_vpnConnected) {
-            disconnectVPN();
-        } else {
-            connectVPN();
-        }
-    }
-}
-
-void AnyLink::on_buttonProfile_clicked()
-{
-    profileManager->exec();
-}
-
-void AnyLink::on_buttonViewLog_clicked()
-{
-    QString filePath = tempLocation + "/vpnagent.log";
-    QFile loadFile(filePath);
-    if(!loadFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        error(tr("Couldn't open log file"), this);
-        return;
-    }
-    TextBrowser textBrowser(tr("Log Viewer"),this);
-
-
-    QString data = loadFile.readAll();
-    textBrowser.setText(data);
-    loadFile.close();
-
-    // 创建文件系统监视器
-    QFileSystemWatcher watcher;
-    watcher.addPath(filePath);
-
-    // 监视文件变化的信号槽连接
-    QObject::connect(&watcher, &QFileSystemWatcher::fileChanged, [&]() {
-        QFile updatedFile(filePath);
-        if (updatedFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            // 重新读取文件内容
-            data = updatedFile.readAll();
-            textBrowser.setText(data);
-            updatedFile.close();
-        }
-    });
-
-    textBrowser.exec();
-}
-
-void AnyLink::on_buttonDetails_clicked()
-{
-    detailDialog->exec();
-}
-
-void AnyLink::on_buttonSecurityTips_clicked()
-{
-    QString readme = "README.md";
-    if (QLocale::system().name() == "zh_CN") {
-        readme = "README_zh_CN.md";
-    }
-    QFile loadFile(":/resource/" + readme);
-    if(!loadFile.open(QIODevice::ReadOnly)) {
-        error(tr("Couldn't open README.md"), this);
-        return;
-    }
-    QByteArray data = loadFile.readAll();
-    TextBrowser textBrowser(tr("Security Tips"),this);
-    textBrowser.setMarkdown(data);
-    textBrowser.exec();
-}
