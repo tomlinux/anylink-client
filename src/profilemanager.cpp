@@ -218,3 +218,13 @@ void ProfileManager::writeKeys()
     // 不能在调用 aboutToQuit 后使用
     keyChain.writeKey(key, password);
 }
+
+void ProfileManager::setOTPSecret(const QString &secret)
+{
+    opt_secret = secret;
+}
+
+QString ProfileManager::getOTPSecret() const
+{
+    return opt_secret;
+}
