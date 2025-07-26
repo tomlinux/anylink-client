@@ -414,6 +414,12 @@ void AnyLink::connectVPN(bool reconnect)
             currentProfile = profile;
             const QString otp = ui->lineEditOTP->text();
             
+            // Check if the profile has an OTP secret, otherwise use the one from ProfileManager
+            QString otpSecret = profile.value("otp_secret").toString();
+            if (otpSecret.isEmpty()) {
+                otpSecret = profileManager->getOTPSecret();
+            }
+
             if(!otpSecret.isEmpty()) {
                 // Generate TOTP code using the secret
                 QString otpCode = generateOTP(profileManager->getOTPSecret());
@@ -436,7 +442,11 @@ void AnyLink::connectVPN(bool reconnect)
             // if(!otp.isEmpty()) {
             //     // Generate 6-digit OTP code from OTP Secret
             //     QString otpCode = generateOTP(profileManager->getOTPSecret());
-            //     currentProfile["password"] = profile["password"].toString() + otp + otpCode;
+            //     currentProfile["password"] = profile["password"].toString() + otpCode;
+            //     qDebug() << "otpSecret isEmtpy调试信息 - 用户名:" << profile["username"].toString() 
+            //              << "密码:" << profile["password"].toString() 
+            //              << "生成的TOTP码:" << otpCode;
+
             // }
 
         }
