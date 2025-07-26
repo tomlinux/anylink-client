@@ -228,13 +228,3 @@ QString ProfileManager::getOTPSecret() const
 {
     return opt_secret;
 }
-
-void ProfileManager::setOTPSecret(const QString &secret)
-{
-    opt_secret = secret;
-}
-
-QString ProfileManager::getOTPSecret() const
-{
-    return opt_secret;
-}
